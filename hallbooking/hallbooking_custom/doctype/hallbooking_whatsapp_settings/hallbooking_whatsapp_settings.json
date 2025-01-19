@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-01-19 17:18:20.699813",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "token",
+  "url",
+  "version",
+  "phone_id",
+  "business_id",
+  "webhook_verify_token"
+ ],
+ "fields": [
+  {
+   "fieldname": "token",
+   "fieldtype": "Password",
+   "label": "Token",
+   "length": 250
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "label": "URL"
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Data",
+   "label": "Version"
+  },
+  {
+   "fieldname": "phone_id",
+   "fieldtype": "Data",
+   "label": "Phone ID"
+  },
+  {
+   "fieldname": "business_id",
+   "fieldtype": "Data",
+   "label": "Business ID"
+  },
+  {
+   "fieldname": "webhook_verify_token",
+   "fieldtype": "Data",
+   "label": "Webhook Verify Token"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-01-19 17:21:05.216819",
+ "modified_by": "Administrator",
+ "module": "hallbooking_custom",
+ "name": "Hallbooking WhatsAPP Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

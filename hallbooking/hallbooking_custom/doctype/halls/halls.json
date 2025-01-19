@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-01-18 14:21:11.042729",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "halls_section",
+  "hall_name",
+  "location",
+  "people_capacity",
+  "status",
+  "column_break_masy",
+  "tv_available",
+  "sound_system_available",
+  "additional_seating_available",
+  "restricted_only_via_approval"
+ ],
+ "fields": [
+  {
+   "fieldname": "halls_section",
+   "fieldtype": "Section Break",
+   "label": "Halls"
+  },
+  {
+   "fieldname": "hall_name",
+   "fieldtype": "Data",
+   "label": "Hall Name"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Location"
+  },
+  {
+   "fieldname": "people_capacity",
+   "fieldtype": "Int",
+   "label": "People Capacity"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Available\nNot Available"
+  },
+  {
+   "fieldname": "column_break_masy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tv_available",
+   "fieldtype": "Select",
+   "label": "TV Available",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "sound_system_available",
+   "fieldtype": "Select",
+   "label": "Sound System Available",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "additional_seating_available",
+   "fieldtype": "Select",
+   "label": "Additional Seating Available",
+   "options": "Yes\nNo"
+  },
+  {
+   "default": "No",
+   "fieldname": "restricted_only_via_approval",
+   "fieldtype": "Select",
+   "label": "Restricted only via approval",
+   "options": "Yes\nNo"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-01-19 11:56:30.332587",
+ "modified_by": "Administrator",
+ "module": "hallbooking_custom",
+ "name": "Halls",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

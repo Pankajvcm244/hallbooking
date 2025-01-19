@@ -1,0 +1,446 @@
+# Copyright (c) 2025, Pankaj Sharma and contributors
+# For license information, please see license.txt
+
+
+import frappe
+from frappe.model.document import Document
+import requests
+from frappe.utils import now_datetime
+from datetime import timedelta, datetime
+from frappe.utils import getdate, today, date_diff
+from frappe.utils import add_days, add_months, now_datetime, get_datetime, format_datetime
+
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+#add "log_level": "DEBUG" in site_config.json to enable debug logs
+# logs will apppear in logs/web.error.log
+#logging.debug("This is a debug message")
+#logging.info("This is an info message")
+#logging.error("This is an error message")
+
+class booking(Document):
+
+    def validate(self):
+        logging.debug(f"In Validate {self.docstatus}")
+        self.validate_time_range()
+        self.check_for_conflicts()
+        #dont check this for cancellation or rejected status
+        #if (self.booking_status == "Pending" or self.booking_status == "Approved"):
+        #    self.validate_time_range()
+            
+
+    def before_save(self):
+        logging.debug(f"Before Save-1 {self.restricted_only_via_approval}, {self.docstatus} ")
+        #set not restricted hall to approved by default
+        #if self.restricted_only_via_approval == "No":
+        #    self.booking_status = "Approved"
+            #self.submit()
+        #if self.enable_whatsup == "Yes":
+            #send_whatsapp_message(self.submitter_mobile, "erpnext1", self.submitter_name)
+        self.track_status_change()
+        logging.debug(f"Before Save-2 {self.docstatus} ")
+        
+    
+    def after_save(self):
+        logging.debug("**********After Save")
+        #send_whatsapp_message(self.submitter_mobile, "erpnext1", self.submitter_name)
+        pass
+    
+    def before_insert(self):
+        """
+        Set the default value of booking_status based on restricted_only_via_approval.
+        """
+        logging.debug(f"before insert-1 {self.restricted_only_via_approval}, {self.booking_status}")
+        if self.restricted_only_via_approval == "No":
+            self.booking_status = "Approved"
+        else:
+            self.booking_status = "Pending"  
+        logging.debug(f"before insert-1 {self.restricted_only_via_approval}, {self.booking_status}")  
+
+    def validate_time_range(self):
+        hall_booking_settings = frappe.get_doc("HallBooking Settings")
+        logging.debug(f"validate time range {self.date}, {self.from_time}, {self.to_time}.  {hall_booking_settings.max_booking_duration}")  
+         
+        # Check if the booking start date is beyond the maximum allowed duration
+        current_date = getdate(today())  
+        # Calculate the maximum allowed booking date
+        max_booking_date = add_days(current_date, hall_booking_settings.max_booking_duration)
+        if getdate(self.date) > max_booking_date:
+            frappe.throw(f"Room bookings cannot be made beyond {hall_booking_settings.max_booking_duration} days from today. The maximum allowed date is {max_booking_date}.")
+        #Ensure that End Time is after Start Time.
+        if self.to_time <= self.from_time:
+            frappe.throw("End Time must be after Start Time.")
+        # Check if the start date and time are in the past
+        if getdate(self.date) < current_date:
+            frappe.throw("Booking cannot be made for a past date or time.")
+        #logging.debug(f"in conflict check {today}, {current_date}, {max_booking_date}, {self.date}")
+        
+
+
+    def check_for_conflicts(self):
+        # Ensure no overlapping bookings for the same room
+        ## AND booking_status = 'Approved'
+        conflicts = frappe.db.sql("""
+            SELECT name
+            FROM `tabbooking`
+            WHERE hall_name = %(hall_name)s            
+            AND date = %(date)s
+            AND (
+                (from_time <= %(to_time)s AND to_time >= %(from_time)s)
+            )  
+            AND name != %(name)s         
+        """, {
+            "hall_name": self.hall_name,
+            "date": self.date,
+            "from_time": self.from_time,
+            "to_time": self.to_time,
+            "name": self.name or ""
+        })
+        #logging.debug(f"**********Check for conflict, {self.name} {conflicts}")
+        if conflicts:
+            # this is to ensure for devotee case we don't make it Approved
+            self.booking_status == "Pending"
+            frappe.throw(f"The hall '{self.hall_name}' is already booked for during this time.")
+
+    def track_status_change(self):
+        """
+        Tracks changes to the booking_status field and triggers actions like sending emails.
+        """
+        # Check if the status has changed or if the document is new
+        if self.is_new() or self.get_db_value("booking_status") != self.booking_status:
+            self.flags.status_changed = True
+
+            # Fetch Hall Booking settings
+            hall_booking_settings = frappe.get_doc("HallBooking Settings")
+
+            # Check if email notifications are enabled
+            if hall_booking_settings.enable_email == "Yes":
+                # Send status change email
+                self.send_status_change_email()
+
+                # Additional emails for specific status
+                if self.booking_status in ["Approved", "Cancelled"]:
+                    # Send emails to IT, Facility, and F&B teams based on requirements
+                    if self.it_team_requirements:
+                        self.send_IT_email()
+                    if self.facility_team_requirements:
+                        self.send_facility_email()
+                    if self.food_and_beverage_team_requirements:
+                        self.send_fnb_email()
+        else:
+            self.flags.status_changed = False
+    
+            
+    def send_status_change_email(self):
+        #logging.debug("send email, with status value=%d", self.flags.status_changed)
+        # Prepare email details
+        subject = f"{self.hall_label} {self.name} status changed to {self.booking_status}"
+        message = f"""
+            Dear {self.submitter_name}, <br> <br>
+            The status of your room booking {self.name} has been updated to: {self.booking_status}. <br> <br>
+            Booking Details: <br>
+            Booking for room '{self.hall_label}'. <br>
+            Booked by Name: {self.submitter_name}  <br>
+            Booked by Email: {self.submitter_email}  <br>
+            Booked by Mobile: {self.submitter_mobile}  <br>
+            Start Time: {self.from_time} <br>
+            End Time: {self.to_time} <br>  <br>
+
+            Additional Facility Requested: <br>
+            IT Facilities requested: <br> >
+            {self.it_team_requirements} <br> 
+            Facilities requested:  <br> >
+            {self.facility_team_requirements } <br> 
+            Food and Beverage Facilities requested: <br>  >
+            {self.food_and_beverage_team_requirements} <br> <br>
+
+            Regards,  <br>
+            VCM Room Booking Team
+         """
+        # Send the email
+        # List of email recipients
+        recipients = [""]
+        recipients.append(self.submitter_email)  # Add the submitter's email
+        # Convert the list into a comma-separated string
+        recipients_str = ", ".join(recipients)
+        frappe.sendmail(
+            recipients= recipients_str,
+            subject=subject,
+            message=message,
+            #cc=["vikram.rajagopal@vcm.org.in"],  # Optional CC emails
+        )
+
+    
+    def send_IT_email(self):
+        #logging.debug("send IT email, with status value=%d", self.flags.status_changed)
+        # Prepare email details
+        subject = f"{self.hall_label} {self.name} has requested IT facilities "
+        message = f"""
+            Hare Krishna IT Team, <br> <br>
+            Room booking {self.name} for room '{self.hall_label}' has requested IT facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
+            Booking Details: <br>
+            Booking for room '{self.hall_label}'. <br>
+            Booked by Name: {self.submitter_name}  <br>
+            Booked by Email: {self.submitter_email}  <br>
+            Booked by Mobile: {self.submitter_mobile}  <br>
+            Start Time: {self.from_time} <br>
+            End Time: {self.to_time} <br> 
+            IT Facilities requested: <br> >
+                {self.it_team_requirements} <br> <br>
+
+            Regards,  <br>
+            VCM Room Booking Team
+         """
+        # Send the email
+        # List of email recipients
+        recipients = ["pankaj.sharma@vcm.org.in"]
+        #recipients.append(self.senior_devotee_email)  # Add the submitter's email
+        # Convert the list into a comma-separated string
+        recipients_str = ", ".join(recipients)
+        frappe.sendmail(
+            recipients= recipients_str,
+            subject=subject,
+            message=message
+        )       
+    def send_facility_email(self):
+        #logging.debug("send Facility email, with status value=%d", self.flags.status_changed)
+        # Prepare email details
+        subject = f"{self.hall_label} {self.name} has requested addiitonal facilities "
+        message = f"""
+            Hare Krishna Facility Team, <br> <br>
+            Room booking {self.name} for room '{self.hall_label}' has requested additional facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
+            Booking Details: <br>
+            Booking for room '{self.hall_label}'. <br>
+            Booked by Name: {self.submitter_name}  <br>
+            Booked by Email: {self.submitter_email}  <br>
+            Booked by Mobile: {self.submitter_mobile}  <br>
+            Start Time: {self.from_timee} <br>
+            End Time: {self.to_time} <br> 
+            Facilities requested:  <br> >
+            {self.facility_team_requirements } <br> <br>
+            Regards,  <br>
+            VCM Room Booking Team
+         """
+        # Send the email
+        # List of email recipients
+        recipients = ["pankaj.sharma@vcm.org.in"]
+        #recipients.append(self.senior_devotee_email)  # Add the submitter's email
+        # Convert the list into a comma-separated string
+        recipients_str = ", ".join(recipients)
+        frappe.sendmail(
+            recipients= recipients_str,
+            subject=subject,
+            message=message
+        )        
+    def send_fnb_email(self):
+        #logging.debug("send Food and Beverage email, with status value=%d", self.flags.status_changed)
+        # Prepare email details
+        subject = f"{self.hall_label} {self.name} has requested Food and Beverage facilities "
+        message = f"""
+            Hare Krishna Food and Beverage Team, <br> <br>
+            Room booking {self.name} for room '{self.hall_label}' has requested Food and Beverage facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
+            Booking Details: <br>
+            Booking for room '{self.hall_label}'. <br>
+            Booked by Name: {self.submitter_name}  <br>
+            Booked by Email: {self.submitter_email}  <br>
+            Booked by Mobile: {self.submitter_mobile}  <br>
+            Start Time: {self.from_time} <br>
+            End Time: {self.to_time} <br> 
+            
+            Food and Beverage Facilities requested: <br>  >
+            {self.food_and_beverage_team_requirements} <br> <br>
+            Regards,  <br>
+            VCM Room Booking Team
+         """
+        # Send the email
+        recipients = ["pankaj.sharma@vcm.org.in"]
+        #recipients.append(self.senior_devotee_email)  # Add the submitter's email
+        # Convert the list into a comma-separated string
+        recipients_str = ", ".join(recipients)
+        frappe.sendmail(
+            recipients= recipients_str,
+            subject=subject,
+            message=message
+        )
+@frappe.whitelist()
+def approve_booking(booking_id):
+    """
+    Approves a booking by updating its status to 'Approved' and saving the changes.
+    """
+    try:
+        
+        # Fetch the booking document
+        booking = frappe.get_doc("booking", booking_id)
+        logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
+        # Check if the booking is in a state that can be approved
+        if booking.booking_status != "Pending":
+            frappe.throw("Only bookings with status 'Pending' can be approved.")
+
+        # Handle cancellation based on docstatus
+
+        booking.booking_status = "Approved"
+        booking.save()
+        logging.info(f"Booking {booking_id} status updated to 'Approved' (draft document).")
+
+        logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
+        return f"Booking {booking_id} has been approved."
+
+    except Exception as e:
+        logging.error(f"Error approving booking {booking_id}: {str(e)}")
+        frappe.throw(f"An error occurred while approving the booking: {str(e)}")
+    
+    
+
+@frappe.whitelist()
+def cancel_booking(booking_id):
+    try:
+        # Fetch the booking document
+        booking = frappe.get_doc("booking", booking_id)
+        logging.debug(f"cancel_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
+        
+        # Check if the booking is in a cancellable state
+        if booking.booking_status not in ["Pending", "Approved"]:
+            frappe.throw("Only Pending or Approved bookings can be cancelled.")
+
+        # Handle cancellation based on docstatus
+        if booking.docstatus == 1:  # Submitted
+            booking.cancel()  # Automatically sets docstatus to 2
+            logging.info(f"Booking {booking_id} has been successfully cancelled (submitted document).")
+        else:
+            booking.booking_status = "Cancelled"
+            booking.save()
+            logging.info(f"Booking {booking_id} status updated to 'Cancelled' (draft document).")
+
+        logging.info(f"Booking {booking_id} has been successfully cancelled.")
+    except Exception as e:
+        logging.error(f"Error cancelling booking {booking_id}: {str(e)}")
+        frappe.throw(f"An error occurred while cancelling the booking: {str(e)}") 
+     
+
+
+@frappe.whitelist()
+def create_recurring_conference_bookings(room_booking_id):
+    """
+    Create recurring conference room bookings with specific date and time.
+    Includes conflict checking and notifications.
+
+    Args:
+    room_booking_id (str): The ID of the RoomBookingVCM record.
+
+    Returns:
+    str: Success message with the number of bookings created.
+    """
+    # Fetch the original room booking document
+    room_booking = frappe.get_doc("RoomBookingVCM", room_booking_id)
+
+    if not room_booking.recurring or not room_booking.recurrence_frequency:
+        frappe.throw("This booking is not marked as recurring or missing recurrence frequency.")
+
+    # Recurrence parameters
+    frequency = room_booking.recurrence_frequency  # Daily, Weekly, Monthly
+    recurrence_count = room_booking.recurrence_count or 1  # Default to 1 if not set
+    start_datetime = get_datetime(room_booking.start_datetime)  # Original start date and time
+    end_datetime = get_datetime(room_booking.end_datetime)  # Original end date and time
+
+    created_bookings = []  # To track the names of created bookings
+    conflicts = []  # To track conflicting bookings
+
+    for i in range(recurrence_count):
+        # Calculate new start and end datetime based on frequency
+        if frequency == "Daily":
+            next_start_datetime = add_days(start_datetime, i)
+            next_end_datetime = add_days(end_datetime, i)
+        elif frequency == "Weekly":
+            #next_start_datetime = add_weeks(start_datetime, i)
+            #next_end_datetime = add_weeks(end_datetime, i)
+            next_start_datetime = start_datetime + timedelta(weeks=i)
+            next_end_datetime = end_datetime + timedelta(weeks=i)
+        elif frequency == "Monthly":
+            next_start_datetime = add_months(start_datetime, i)
+            next_end_datetime = add_months(end_datetime, i)
+        else:
+            frappe.throw("Invalid recurrence frequency. Use 'Daily', 'Weekly', or 'Monthly'.")
+
+        # Check for conflicts
+        conflict = frappe.db.exists("RoomBookingVCM", {
+            "room_name": room_booking.room_name,
+            "start_datetime": ("<=", next_end_datetime),
+            "end_datetime": (">=", next_start_datetime),
+            "name": ("!=", room_booking.name),  # Exclude the original booking
+            "booking_status": "Confirmed"  # Only consider confirmed bookings
+        })
+
+        if conflict:
+            conflicts.append({
+                "start_datetime": next_start_datetime,
+                "end_datetime": next_end_datetime,
+                "conflict_with": conflict,
+            })
+            continue  # Skip creating this booking
+
+        # Create a new booking document
+        new_booking = frappe.get_doc({
+            "doctype": "RoomBookingVCM",
+            "room_name": room_booking.room_name,
+            "start_datetime": format_datetime(next_start_datetime),
+            "end_datetime": format_datetime(next_end_datetime),
+            "senior_devotee_name": room_booking.senior_devotee_name,
+            "senior_devotee_email": room_booking.senior_devotee_email,
+            "booking_status": "Draft",
+            "recurring_reference": room_booking.name,  # Link to original booking
+        })
+        new_booking.insert()
+        created_bookings.append(new_booking.name)
+
+    frappe.db.commit()
+
+    # Prepare the response
+    if conflicts:
+        conflict_message = f"{len(conflicts)} conflicts detected:\n" + "\n".join([
+            f"Conflict with booking {c['conflict_with']} (From {c['start_datetime']} to {c['end_datetime']})"
+            for c in conflicts
+        ])
+    else:
+        conflict_message = "No conflicts detected."
+
+    success_message = f"Successfully created {len(created_bookings)} bookings."
+    return f"{success_message}\n\n{conflict_message}"
+
+
+@frappe.whitelist()
+def send_whatsapp_message(phone_number, template_id, params):
+    api_url = "https://api.interakt.ai/v1/public/message/"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic WG1ZaWxDUnhaWGM0eWZ2VE5IRklBYUJHLUpwSUMwVWU3QjJ5UGVpNURXNDo="
+    }
+
+    data = {
+        "countryCode": "+91",
+        "fullPhoneNumber": f"+91{phone_number}",
+        "callbackData": "some text here",
+        "type": "Template",
+        "template": {
+            "name": template_id,
+            "languageCode": "en",
+            "headerValues": [
+                "header_variable_value"
+            ],
+            "bodyValues": [
+                params
+            ]
+        }
+        
+    }
+
+    try:
+        response = requests.post(api_url, headers=headers, json=data)
+        response.raise_for_status()  # Raise exception for HTTP errors
+        logging.debug(f"******************whatsup message sent {response.json()}")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.debug(f"&&&&&&&&&&&&&whatsup message sent error  {response.json()}, {str(e)}")
+        frappe.throw(f"Error sending WhatsApp message: {str(e)}")
+

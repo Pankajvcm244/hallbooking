@@ -1,0 +1,101 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:HallSettings-{###)",
+ "creation": "2025-01-19 17:11:24.650726",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "vcm_hall_bookings_settings_section",
+  "hall_booking_approver_email",
+  "facility_team_email",
+  "fnb_team_email",
+  "it_team_email",
+  "column_break_uero",
+  "enable_whatsup",
+  "enable_email",
+  "max_booking_duration"
+ ],
+ "fields": [
+  {
+   "fieldname": "vcm_hall_bookings_settings_section",
+   "fieldtype": "Section Break",
+   "label": "VCM Hall Bookings Settings"
+  },
+  {
+   "fieldname": "hall_booking_approver_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Hall Booking Approver Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "facility_team_email",
+   "fieldtype": "Data",
+   "label": "Facility Team Email"
+  },
+  {
+   "fieldname": "fnb_team_email",
+   "fieldtype": "Data",
+   "label": "FnB Team Email"
+  },
+  {
+   "fieldname": "it_team_email",
+   "fieldtype": "Data",
+   "label": "IT Team Email"
+  },
+  {
+   "fieldname": "column_break_uero",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "max_booking_duration",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Max Booking Duration",
+   "reqd": 1
+  },
+  {
+   "default": "No",
+   "fieldname": "enable_whatsup",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Enable Whatsup",
+   "options": "Yes\nNo",
+   "reqd": 1
+  },
+  {
+   "default": "No",
+   "fieldname": "enable_email",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Enable Email",
+   "options": "Yes\nNo",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-01-19 17:27:53.609810",
+ "modified_by": "Administrator",
+ "module": "hallbooking_custom",
+ "name": "HallBooking Settings",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

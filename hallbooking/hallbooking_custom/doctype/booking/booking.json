@@ -1,0 +1,219 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:BK-{YY}{MM}-{####}",
+ "creation": "2025-01-19 11:23:55.818355",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "hall_details_section",
+  "hall_details_column",
+  "hall_name",
+  "location",
+  "booking_status",
+  "restricted_only_via_approval",
+  "hall_label",
+  "room_booking_details_column",
+  "date",
+  "from_time",
+  "to_time",
+  "submitter_details_column",
+  "submitter_name",
+  "submitter_email",
+  "submitter_mobile",
+  "purpose",
+  "facility_availablerequired_section",
+  "people_capacity",
+  "additional_seating_available",
+  "column_break_gyiy",
+  "facility_team_requirements",
+  "it_facility_availablerequired_section",
+  "sound_system_available",
+  "tv_available",
+  "column_break_huss",
+  "it_team_requirements",
+  "f_and_b_requirements_section",
+  "food_and_beverage_team_requirements"
+ ],
+ "fields": [
+  {
+   "fieldname": "hall_details_section",
+   "fieldtype": "Section Break",
+   "label": "Hall Details"
+  },
+  {
+   "fieldname": "hall_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Hall Name",
+   "options": "Halls",
+   "reqd": 1
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Location",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "booking_status",
+   "fieldtype": "Select",
+   "label": "Booking Status",
+   "options": "Pending\nApproved\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "hall_label",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Hall Label",
+   "read_only": 1
+  },
+  {
+   "fieldname": "room_booking_details_column",
+   "fieldtype": "Column Break",
+   "label": "Room Booking Details"
+  },
+  {
+   "fieldname": "submitter_details_column",
+   "fieldtype": "Column Break",
+   "label": "Submitter Details"
+  },
+  {
+   "fieldname": "submitter_name",
+   "fieldtype": "Data",
+   "label": "Submitter Name"
+  },
+  {
+   "fieldname": "submitter_email",
+   "fieldtype": "Data",
+   "label": "Submitter Email"
+  },
+  {
+   "fieldname": "submitter_mobile",
+   "fieldtype": "Int",
+   "label": "Submitter Mobile"
+  },
+  {
+   "fieldname": "facility_availablerequired_section",
+   "fieldtype": "Section Break",
+   "label": "Facility Available/Required"
+  },
+  {
+   "fieldname": "people_capacity",
+   "fieldtype": "Data",
+   "label": "People Capacity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "additional_seating_available",
+   "fieldtype": "Data",
+   "label": "Additional Seating Available ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_gyiy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "facility_team_requirements",
+   "fieldtype": "Small Text",
+   "label": "Facility Team Requirements"
+  },
+  {
+   "fieldname": "it_facility_availablerequired_section",
+   "fieldtype": "Section Break",
+   "label": "IT Facility Available/Required"
+  },
+  {
+   "fieldname": "sound_system_available",
+   "fieldtype": "Data",
+   "label": "Sound System Available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tv_available",
+   "fieldtype": "Data",
+   "label": "TV Available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_huss",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "f_and_b_requirements_section",
+   "fieldtype": "Section Break",
+   "label": "F and B Requirements"
+  },
+  {
+   "fieldname": "food_and_beverage_team_requirements",
+   "fieldtype": "Small Text",
+   "label": "Food and Beverage Team Requirements"
+  },
+  {
+   "fieldname": "hall_details_column",
+   "fieldtype": "Column Break",
+   "label": "Hall Details"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Small Text",
+   "label": "Purpose"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "label": "From Time"
+  },
+  {
+   "fieldname": "to_time",
+   "fieldtype": "Time",
+   "label": "To Time"
+  },
+  {
+   "fieldname": "restricted_only_via_approval",
+   "fieldtype": "Data",
+   "label": "Restricted only via approval",
+   "read_only": 1
+  },
+  {
+   "fieldname": "it_team_requirements",
+   "fieldtype": "Small Text",
+   "label": "IT Team Requirements"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-01-19 13:03:57.977880",
+ "modified_by": "Administrator",
+ "module": "hallbooking_custom",
+ "name": "booking",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "hall_name"
+}
