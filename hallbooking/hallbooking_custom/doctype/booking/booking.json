@@ -17,6 +17,8 @@
   "date",
   "from_time",
   "to_time",
+  "starttime",
+  "endtime",
   "submitter_details_column",
   "submitter_name",
   "submitter_email",
@@ -187,11 +189,25 @@
    "fieldname": "it_team_requirements",
    "fieldtype": "Small Text",
    "label": "IT Team Requirements"
+  },
+  {
+   "fieldname": "starttime",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "StartTime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "endtime",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "EndTime",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-20 13:43:43.960922",
+ "modified": "2025-01-22 15:23:38.702945",
  "modified_by": "Administrator",
  "module": "hallbooking_custom",
  "name": "booking",

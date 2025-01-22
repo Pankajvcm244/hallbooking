@@ -75,7 +75,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-19 11:56:30.332587",
+ "modified": "2025-01-21 22:34:55.539996",
  "modified_by": "Administrator",
  "module": "hallbooking_custom",
  "name": "Halls",
@@ -94,7 +94,9 @@
    "write": 1
   }
  ],
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "hall_name"
 }

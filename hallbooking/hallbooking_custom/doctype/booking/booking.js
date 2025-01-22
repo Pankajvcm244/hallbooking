@@ -72,7 +72,7 @@ frappe.ui.form.on('booking', {
                         frm.set_value('people_capacity', room.people_capacity); // Assuming `seating_capacity` exists
                         frm.set_value('sound_system_available', room.sound_system_available); // Example field
                         frm.set_value('tv_available', room.tv_available);
-                        frm.set_value('hall_label', room.room_name);
+                        frm.set_value('hall_label', room.hall_name);
                         frm.set_value('additional_seating_available', room.additional_seating_available);
                         frm.set_value('restricted_only_via_approval', room.restricted_only_via_approval);
                     } else {

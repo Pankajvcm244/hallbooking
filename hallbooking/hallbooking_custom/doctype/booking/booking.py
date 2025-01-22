@@ -2,7 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
+import frappe , json
+from frappe.utils.password import get_decrypted_password
 from frappe.model.document import Document
 import requests
 from frappe.utils import now_datetime
@@ -26,30 +27,33 @@ class booking(Document):
         self.check_for_conflicts()
 
     def before_save(self):
-        logging.debug(f"Before Save-1 {self.docstatus} ")
+        #logging.debug(f"Before Save-1 {self.docstatus} ")
+        # Add default time as calendar wants datetime format
+        self.starttime = f"{self.date}T{self.from_time}"
+        self.endtime = f"{self.date}T{self.to_time}"
+        #logging.debug(f"Before Save-2 {self.starttime} {self.endtime}")   
         self.track_status_change()
-        logging.debug(f"Before Save-2 {self.docstatus} ")
+        #logging.debug(f"Before Save-2 {self.docstatus} ")
         
     
     def after_save(self):
-        logging.debug("**********After Save")
-        #send_whatsapp_message(self.submitter_mobile, "erpnext1", self.submitter_name)
+        #logging.debug("**********After Save")
         pass
     
     def before_insert(self):
         """
         Set the default value of booking_status based on restricted_only_via_approval.
         """
-        logging.debug(f"before insert-1 {self.restricted_only_via_approval}, {self.booking_status}")
+        #logging.debug(f"before insert-1 {self.restricted_only_via_approval}, {self.booking_status}")
         if self.restricted_only_via_approval == "No":
             self.booking_status = "Approved"
         else:
             self.booking_status = "Pending"  
-        logging.debug(f"before insert-1 {self.restricted_only_via_approval}, {self.booking_status}")  
+        #logging.debug(f"before insert-1 {self.restricted_only_via_approval}, {self.booking_status}")  
 
     def validate_time_range(self):
         hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        logging.debug(f"validate time range {self.date}, {self.from_time}, {self.to_time}.  {hall_booking_settings.max_booking_duration}")  
+        #logging.debug(f"validate time range  {self.date}, {self.from_time}, {self.to_time}.  {hall_booking_settings.max_booking_duration}")  
         # Check if the booking start date is beyond the maximum allowed duration
         current_date = getdate(today())  
         # Calculate the maximum allowed booking date
@@ -87,7 +91,7 @@ class booking(Document):
         if conflicts:
             # this is to ensure for devotee case we don't make it Approved
             self.booking_status == "Pending"
-            frappe.throw(f"The hall '{self.hall_name}' is already booked for during this time.")
+            frappe.throw(f"The hall '{self.hall_label}' is already booked for during this time.")
 
     def track_status_change(self):
         # Check if the status has changed or if the document is new
@@ -99,7 +103,7 @@ class booking(Document):
             if hall_booking_settings.enable_email == "Yes":
                 # Send status change email
                 self.send_status_change_email()
-                logging.debug(f"track status send email")
+                #logging.debug(f"track_status_change send email")
                 # Additional emails for specific status
                 if self.booking_status in ["Approved", "Cancelled"]:
                     # Send emails to IT, Facility, and F&B teams based on requirements
@@ -111,23 +115,21 @@ class booking(Document):
                         self.send_fnb_email()
             if hall_booking_settings.enable_whatsup == "Yes":
                 # Send status change email
-                send_whatsapp_message(self.submitter_name, self.submitter_mobile, self.hall_name,self.booking_status, self.name, self.date, self.from_time, self.to_time)
-                logging.debug(f"track status send email")
-                
+                send_whatsapp_message(self.submitter_name, self.submitter_mobile, self.hall_label, self.booking_status, self.name, self.date, self.from_time, self.to_time)
         else:
             self.flags.status_changed = False
     
             
     def send_status_change_email(self):
-        logging.debug("send email, with status value=%d", self.flags.status_changed)
+        #logging.debug("send email, with status value=%d", self.flags.status_changed)
         # Prepare email details
         hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        subject = f"{self.hall_name} {self.name} status changed to {self.booking_status}"
+        subject = f"{self.hall_label} {self.name} status changed to {self.booking_status}"
         message = f"""
             Dear {self.submitter_name}, <br> <br>
             The status of your room booking {self.name} has been updated to: {self.booking_status}. <br> <br>
             Booking Details: <br>
-            Booking for room '{self.hall_name}'. <br>
+            Booking for room '{self.hall_label}'. <br>
             Booked by Name: {self.submitter_name}  <br>
             Booked by Email: {self.submitter_email}  <br>
             Booked by Mobile: {self.submitter_mobile}  <br>
@@ -163,14 +165,14 @@ class booking(Document):
     
     def send_IT_email(self):
         hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        logging.debug(f"send IT email, with {hall_booking_settings.it_team_email}")
+        #logging.debug(f"send IT email, with {hall_booking_settings.it_team_email}")
         if hall_booking_settings.it_team_email:             
-            subject = f"{self.hall_name} {self.name} has requested IT facilities "
+            subject = f"{self.hall_label} {self.name} has requested IT facilities "
             message = f"""
                 Hare Krishna IT Team, <br> <br>
                 Room booking {self.name} for room '{self.hall_label}' has requested IT facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
                 Booking Details: <br>
-                Booking for room '{self.hall_name}'. <br>
+                Booking for room '{self.hall_label}'. <br>
                 Booked by Name: {self.submitter_name}  <br>
                 Booked by Email: {self.submitter_email}  <br>
                 Booked by Mobile: {self.submitter_mobile}  <br>
@@ -186,10 +188,10 @@ class booking(Document):
             # List of email recipients
             recipients = []
             recipients.append(hall_booking_settings.it_team_email)  
-            logging.debug(f"send IT-3 email, with  {recipients}")
+            #logging.debug(f"send IT-3 email, with  {recipients}")
             # Convert the list into a comma-separated string
             recipients_str = ", ".join(recipients)
-            logging.debug(f"send IT-4 email, with  {recipients_str}")
+            #logging.debug(f"send IT-4 email, with  {recipients_str}")
             frappe.sendmail(
                 recipients= recipients_str,
                 subject=subject,
@@ -197,14 +199,14 @@ class booking(Document):
             )       
     def send_facility_email(self):
         hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        logging.debug(f"send IT email, with {hall_booking_settings.facility_team_email}")
+        #logging.debug(f"send IT email, with {hall_booking_settings.facility_team_email}")
         if hall_booking_settings.facility_team_email:   
-            subject = f"{self.hall_name} {self.name} has requested addiitonal facilities "
+            subject = f"{self.hall_label} {self.name} has requested addiitonal facilities "
             message = f"""
                 Hare Krishna Facility Team, <br> <br>
                 Room booking {self.name} for room '{self.hall_label}' has requested additional facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
                 Booking Details: <br>
-                Booking for room '{self.hall_name}'. <br>
+                Booking for room '{self.hall_label}'. <br>
                 Booked by Name: {self.submitter_name}  <br>
                 Booked by Email: {self.submitter_email}  <br>
                 Booked by Mobile: {self.submitter_mobile}  <br>
@@ -219,10 +221,10 @@ class booking(Document):
             # List of email recipients
             recipients = []
             recipients.append(hall_booking_settings.facility_team_email)  # Add the submitter's email
-            logging.debug(f"send Facilt-3 email, with {hall_booking_settings.facility_team_email}, {recipients}")
+            #logging.debug(f"send Facilt-3 email, with {hall_booking_settings.facility_team_email}, {recipients}")
             # Convert the list into a comma-separated string
             recipients_str = ", ".join(recipients)
-            logging.debug(f"send IT-3 email, with {hall_booking_settings.facility_team_email}, {recipients_str}")
+            #logging.debug(f"send IT-3 email, with {hall_booking_settings.facility_team_email}, {recipients_str}")
             frappe.sendmail(
                 recipients= recipients_str,
                 subject=subject,
@@ -230,15 +232,15 @@ class booking(Document):
             )        
     def send_fnb_email(self):
         hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        logging.debug("send Food and Beverage email, with status value=%d", self.flags.status_changed)
+        #logging.debug("send Food and Beverage email, with status value=%d", self.flags.status_changed)
         if hall_booking_settings.fnb_team_email:  
             # Prepare email details
-            subject = f"{self.hall_name} {self.name} has requested Food and Beverage facilities"
+            subject = f"{self.hall_label} {self.name} has requested Food and Beverage facilities"
             message = f"""
                 Hare Krishna Food and Beverage Team, <br> <br>
                 Room booking {self.name} for room '{self.hall_label}' has requested Food and Beverage facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
                 Booking Details: <br>
-                Booking for room '{self.hall_name}'. <br>
+                Booking for room '{self.hall_label}'. <br>
                 Booked by Name: {self.submitter_name}  <br>
                 Booked by Email: {self.submitter_email}  <br>
                 Booked by Mobile: {self.submitter_mobile}  <br>
@@ -253,10 +255,10 @@ class booking(Document):
             # Send the email
             recipients = []
             recipients.append(hall_booking_settings.fnb_team_email)  # Add the submitter's email
-            logging.debug(f"send Fnb-3 email, with {hall_booking_settings.fnb_team_email}, {recipients}")
+            #logging.debug(f"send Fnb-3 email, with {hall_booking_settings.fnb_team_email}, {recipients}")
             # Convert the list into a comma-separated string
             recipients_str = ", ".join(recipients)
-            logging.debug(f"send FnB-3 email, with {hall_booking_settings.fnb_team_email}, {recipients_str}")
+            #logging.debug(f"send FnB-3 email, with {hall_booking_settings.fnb_team_email}, {recipients_str}")
             frappe.sendmail(
                 recipients= recipients_str,
                 subject=subject,
@@ -271,7 +273,7 @@ def approve_booking(booking_id):
         
         # Fetch the booking document
         booking = frappe.get_doc("booking", booking_id)
-        logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
+        #logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
         # Check if the booking is in a state that can be approved
         if booking.booking_status != "Pending":
             frappe.throw("Only bookings with status 'Pending' can be approved.")
@@ -282,7 +284,7 @@ def approve_booking(booking_id):
         booking.save()
         logging.info(f"Booking {booking_id} status updated to 'Approved' (draft document).")
 
-        logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
+        #logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
         return f"Booking {booking_id} has been approved."
 
     except Exception as e:
@@ -296,7 +298,7 @@ def cancel_booking(booking_id):
     try:
         # Fetch the booking document
         booking = frappe.get_doc("booking", booking_id)
-        logging.debug(f"cancel_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
+        #logging.debug(f"cancel_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
         
         # Check if the booking is in a cancellable state
         if booking.booking_status not in ["Pending", "Approved"]:
@@ -314,7 +316,7 @@ def cancel_booking(booking_id):
         logging.info(f"Booking {booking_id} has been successfully cancelled.")
     except Exception as e:
         logging.error(f"Error cancelling booking {booking_id}: {str(e)}")
-        frappe.throw(f"An error occurred while cancelling the booking: {str(e)}") 
+        #frappe.throw(f"An error occurred while cancelling the booking: {str(e)}") 
      
 
 
@@ -412,16 +414,44 @@ def send_whatsapp_message(name, mobile, hall_name, booking_status, booking_id,da
     whatsupsettings = frappe.get_doc("Hallbooking WhatsAPP Settings")
     # Fetch the booking document
     #booking = frappe.get_doc("booking", booking_id)
-    logging.debug(f"whatsup {name},{mobile}, {hall_name}, {booking_status},  {booking_id}, {whatsupsettings.template}, {date}, {from_time}, {to_time} ")
-    api_url = "https://api.interakt.ai/v1/public/message/"
     
+    doctype = "Hallbooking WhatsAPP Settings"  # Example of a singleton DocType
+    fieldname = "token" 
+    decrypted_value = get_decrypted_password(doctype, doctype, fieldname)
+    #logging.debug(f"whatsup {name},{mobile}, {hall_name}, {booking_status},  {booking_id}, {whatsupsettings.template}, {date}, {from_time}, {to_time} ")
+    if isinstance(date, str):
+        jsondate = date        
+    else:
+        jsondate = date.isoformat()  # Convert to ISO 8601 format
+
+    if isinstance(from_time,str):
+        # Split by ':' and take the first two parts
+        jsonstarttime = ":".join(from_time.split(":")[:2])      
+    else:        
+        # Convert timedelta to hours and minutes
+        total_seconds = from_time.total_seconds()
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        # Format as HH:MM
+        jsonstarttime = f"{int(hours):02}:{int(minutes):02}"
+    
+    if isinstance(to_time,str):
+        jsonendtime = ":".join(to_time.split(":")[:2]) 
+        #jsonendtime = to_time
+    else:
+        # Convert timedelta to hours and minutes
+        total_seconds = to_time.total_seconds()
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        # Format as HH:MM
+        jsonendtime = f"{int(hours):02}:{int(minutes):02}"
+
+    #logging.debug(f"whatsup {jsondate}, {jsonstarttime}, {jsonendtime}")
+
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Basic WG1ZaWxDUnhaWGM0eWZ2VE5IRklBYUJHLUpwSUMwVWU3QjJ5UGVpNURXNDo="
+        "Authorization": f"Basic {decrypted_value}"
     }
-    #Hall Booking status changed to {{roomstatus}}
-    #Hare Krishna {{submittername}}, your booking for hall {{hallname}} for {{date}} from {{timefrom}} till {{timeto}} has been changed.
-    #VCM Hall Booking Team
     data = {
         "countryCode": "+91",
         "fullPhoneNumber": f"+91{mobile}",
@@ -429,28 +459,25 @@ def send_whatsapp_message(name, mobile, hall_name, booking_status, booking_id,da
         "type": "Template",
         "template": {
             "name": f"{whatsupsettings.template}",
-            "languageCode": "en_US",
+            "languageCode": "en",
             "headerValues": [
-                "booking_status"
-            ],
-            
+                booking_status
+            ],            
             "bodyValues": [
-                "name",
-                "hall_name",
-                "date",
-                "from_time",
-                "to_time"
+                name,
+                hall_name,
+                jsondate,
+                jsonstarttime,
+                jsonendtime
             ]
-        }
-        
+        }        
     }
-
     try:
-        response = requests.post(api_url, headers=headers, json=data)
+        response = requests.post(whatsupsettings.url, headers=headers, json=data)
         response.raise_for_status()  # Raise exception for HTTP errors
-        logging.debug(f"******************whatsup message sent {response.json()}")
+        #logging.debug(f"******************whatsup message sent {response.json()}")
         return response.json()
     except requests.exceptions.RequestException as e:
-        logging.debug(f"&&&&&&&&&&&&&whatsup message sent error  {response.json()}, {str(e)}")
+        #logging.debug(f"&&&&&&&&&&&&&whatsup message sent error  {response.json()}, {str(e)}")
         frappe.throw(f"Error sending WhatsApp message: {str(e)}")
 
