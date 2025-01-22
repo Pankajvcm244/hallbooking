@@ -207,7 +207,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-22 15:23:38.702945",
+ "modified": "2025-01-22 15:33:17.802706",
  "modified_by": "Administrator",
  "module": "hallbooking_custom",
  "name": "booking",
@@ -223,6 +223,17 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
    "share": 1,
    "write": 1
   }

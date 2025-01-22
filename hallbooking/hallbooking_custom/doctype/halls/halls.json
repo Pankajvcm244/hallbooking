@@ -75,7 +75,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-21 22:34:55.539996",
+ "modified": "2025-01-22 15:33:39.464936",
  "modified_by": "Administrator",
  "module": "hallbooking_custom",
  "name": "Halls",
@@ -92,6 +92,15 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
   }
  ],
  "show_title_field_in_link": 1,

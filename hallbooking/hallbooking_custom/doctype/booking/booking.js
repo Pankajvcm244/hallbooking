@@ -4,7 +4,7 @@
 frappe.ui.form.on('booking', {
     refresh: function (frm) {
         // Example: Show buttons only for users with the "VCM Room Approver" role
-        if (frappe.user_roles.includes('VCM Room Approver')) {
+        if (frappe.user_roles.includes('VCM Hall Approver')) {
             if (frm.doc.booking_status === 'Pending') {
                 frm.add_custom_button(__('Approve'), function () {
                     frappe.call({

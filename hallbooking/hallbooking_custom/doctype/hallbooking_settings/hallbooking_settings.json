@@ -77,7 +77,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-19 17:27:53.609810",
+ "modified": "2025-01-22 15:36:35.560600",
  "modified_by": "Administrator",
  "module": "hallbooking_custom",
  "name": "HallBooking Settings",
@@ -91,6 +91,21 @@
    "print": 1,
    "read": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "All",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "VCM Hall Approver",
    "share": 1,
    "write": 1
   }
