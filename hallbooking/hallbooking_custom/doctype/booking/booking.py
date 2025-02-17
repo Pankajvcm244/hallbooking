@@ -34,11 +34,6 @@ class booking(Document):
         #logging.debug(f"Before Save-2 {self.starttime} {self.endtime}")   
         self.track_status_change()
         #logging.debug(f"Before Save-2 {self.docstatus} ")
-        
-    
-    def after_save(self):
-        #logging.debug("**********After Save")
-        pass
     
     def before_insert(self):
         """
@@ -80,7 +75,8 @@ class booking(Document):
             AND (
                 (from_time <= %(to_time)s AND to_time >= %(from_time)s)
             )  
-            AND name != %(name)s         
+            AND name != %(name)s
+            AND booking_status != 'Cancelled'        
         """, {
             "hall_name": self.hall_name,
             "date": self.date,
@@ -312,6 +308,7 @@ def cancel_booking(booking_id):
             booking.booking_status = "Cancelled"
             booking.save()
             logging.info(f"Booking {booking_id} status updated to 'Cancelled' (draft document).")
+            
 
         logging.info(f"Booking {booking_id} has been successfully cancelled.")
     except Exception as e:
@@ -480,4 +477,51 @@ def send_whatsapp_message(name, mobile, hall_name, booking_status, booking_id,da
     except requests.exceptions.RequestException as e:
         #logging.debug(f"&&&&&&&&&&&&&whatsup message sent error  {response.json()}, {str(e)}")
         frappe.throw(f"Error sending WhatsApp message: {str(e)}")
+
+
+
+
+
+
+
+
+# @frappe.whitelist(allow_guest=True)  # Make sure this decorator is present
+# def update_booking_status(booking_id, status):
+#     """Update booking status"""
+
+#     if not frappe.db.exists("booking", booking_id):
+#         frappe.throw(_("Booking ID {} does not exist").format(booking_id))
+
+#     booking = frappe.get_doc("booking", booking_id)
+#     booking.booking_status = status
+#     booking.save()
+#     frappe.db.commit()
+
+#     return {"status": "success", "message": f"Booking {status.lower()} successfully updated."}
+
+
+@frappe.whitelist(allow_guest=True)
+def update_booking_status(booking_id, status):
+    """Update booking status (Approve or Cancel)"""
+
+    # Check if the booking exists
+    if not frappe.db.exists("booking", booking_id):
+        frappe.throw(_("Booking ID {} does not exist").format(booking_id))
+
+    booking = frappe.get_doc("booking", booking_id)
+    
+    # Only allow valid status updates
+    if status not in ["Approved", "Cancelled"]:
+        return {"status": "error", "message": _("Invalid status provided.")}
+
+    if booking.booking_status == status:
+        return {"status": "error", "message": _(f"Booking is already {status}.")}
+
+    # Update the booking status
+    booking.booking_status = status
+    booking.save(ignore_permissions=True)  # Ignore permissions if needed
+    frappe.db.commit()
+
+    return {"status": "success", "message": _(f"Booking has been successfully {status.lower()}.")}
+
 

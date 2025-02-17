@@ -242,3 +242,21 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+
+# api_paths = [
+#     {"method": "POST", "path": "approve_booking", "handler": "hallbooking.hallbooking_custom.api.booking.approve_booking"},
+#     {"method": "POST", "path": "cancel_booking", "handler": "hallbooking.hallbooking_custom.api.booking.cancel_booking"}
+# ]
+
+api_paths = [
+    {"method": "PUT", "path": "update_booking_status", "handler": "hallbooking.hallbooking_custom.api.booking.update_booking_status"}
+]
+# api_paths = [
+#     {"method": "PUT", "path": "/api/method/hallbooking_custom.api.booking.update_booking_status"}
+# ]
+
+# doc_events = {
+#     "booking": {
+#         "on_update": "hallbooking.api.update_booking_status"
+#     }
+# }
