@@ -131,7 +131,8 @@ class booking(Document):
             Booked by Mobile: {self.submitter_mobile}  <br>
             Date: {self.date} <br>
             Start Time: {self.from_time} <br>
-            End Time: {self.to_time} <br>  <br>
+            End Time: {self.to_time} <br>
+            Purpose: {self.purpose} <br>  <br>
 
             Additional Facility Requested: <br>
             IT Facilities requested: <br> >
@@ -174,6 +175,7 @@ class booking(Document):
                 Booked by Mobile: {self.submitter_mobile}  <br>
                 Start Time: {self.from_time} <br>
                 End Time: {self.to_time} <br> 
+                Purpose: {self.purpose} <br>  <br>
                 IT Facilities requested: <br> >
                     {self.it_team_requirements} <br> <br>
 
@@ -208,6 +210,7 @@ class booking(Document):
                 Booked by Mobile: {self.submitter_mobile}  <br>
                 Start Time: {self.from_time} <br>
                 End Time: {self.to_time} <br> 
+                Purpose: {self.purpose} <br>  <br>
                 Facilities requested:  <br> >
                 {self.facility_team_requirements } <br> <br>
                 Regards,  <br>
@@ -242,6 +245,8 @@ class booking(Document):
                 Booked by Mobile: {self.submitter_mobile}  <br>
                 Start Time: {self.from_time} <br>
                 End Time: {self.to_time} <br> 
+                Purpose: {self.purpose} <br> 
+
                 
                 Food and Beverage Facilities requested: <br>  >
                 {self.food_and_beverage_team_requirements} <br> <br>
@@ -390,7 +395,6 @@ def create_recurring_conference_bookings(room_booking_id):
         })
         new_booking.insert()
         created_bookings.append(new_booking.name)
-
     frappe.db.commit()
 
     # Prepare the response
