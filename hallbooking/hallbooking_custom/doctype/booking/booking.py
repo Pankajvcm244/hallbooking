@@ -12,8 +12,8 @@ from frappe.utils import getdate, today, date_diff
 from frappe.utils import add_days, add_months, now_datetime, get_datetime, format_datetime
 
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
 #add "log_level": "DEBUG" in site_config.json to enable debug logs
 # logs will apppear in logs/web.error.log
 #logging.debug("This is a debug message")
@@ -91,6 +91,9 @@ class booking(Document):
 
     def track_status_change(self):
         # Check if the status has changed or if the document is new
+        IT_flag = False
+        Facility_flag = False
+        Fnb_flag = False
         if self.is_new() or self.get_db_value("booking_status") != self.booking_status:
             self.flags.status_changed = True
             # Fetch Hall Booking settings
@@ -98,17 +101,21 @@ class booking(Document):
             # Check if email notifications are enabled
             if hall_booking_settings.enable_email == "Yes":
                 # Send status change email
-                self.send_status_change_email()
+                #self.send_status_change_email()                
                 #logging.debug(f"track_status_change send email")
                 # Additional emails for specific status
                 if self.booking_status in ["Approved", "Cancelled"]:
                     # Send emails to IT, Facility, and F&B teams based on requirements
                     if self.it_team_requirements:
-                        self.send_IT_email()
+                        #self.send_IT_email()
+                        IT_flag = True
                     if self.facility_team_requirements:
-                        self.send_facility_email()
+                        #self.send_facility_email()
+                        Facility_flag = True
                     if self.food_and_beverage_team_requirements:
-                        self.send_fnb_email()
+                        #self.send_fnb_email()
+                        Fnb_flag = True
+                self.send_email_approval_new(IT_flag, Facility_flag, Fnb_flag)
             if hall_booking_settings.enable_whatsup == "Yes":
                 # Send status change email
                 send_whatsapp_message(self.submitter_name, self.submitter_mobile, self.hall_label, self.booking_status, self.name, self.date, self.from_time, self.to_time)
@@ -116,155 +123,190 @@ class booking(Document):
             self.flags.status_changed = False
     
             
-    def send_status_change_email(self):
-        #logging.debug("send email, with status value=%d", self.flags.status_changed)
-        # Prepare email details
-        hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        subject = f"{self.hall_label} {self.name} status changed to {self.booking_status}"
-        message = f"""
-            Dear {self.submitter_name}, <br> <br>
-            The status of your room booking {self.name} has been updated to: {self.booking_status}. <br> <br>
-            Booking Details: <br>
-            Booking for room '{self.hall_label}'. <br>
-            Booked by Name: {self.submitter_name}  <br>
-            Booked by Email: {self.submitter_email}  <br>
-            Booked by Mobile: {self.submitter_mobile}  <br>
-            Date: {self.date} <br>
-            Start Time: {self.from_time} <br>
-            End Time: {self.to_time} <br>
-            Purpose: {self.purpose} <br>  <br>
+    # def send_status_change_email(self):
+    #     #logging.debug("send email, with status value=%d", self.flags.status_changed)
+    #     # Prepare email details
+    #     hall_booking_settings = frappe.get_doc("HallBooking Settings")
+    #     subject = f"{self.hall_label} {self.name} status changed to {self.booking_status}"
+    #     message = f"""
+    #         Dear {self.submitter_name}, <br> <br>
+    #         The status of your room booking {self.name} has been updated to: {self.booking_status}. <br> <br>
+    #         Booking Details: <br>
+    #         Booking for room '{self.hall_label}'. <br>
+    #         Booked by Name: {self.submitter_name}  <br>
+    #         Booked by Email: {self.submitter_email}  <br>
+    #         Booked by Mobile: {self.submitter_mobile}  <br>
+    #         Date: {self.date} <br>
+    #         Start Time: {self.from_time} <br>
+    #         End Time: {self.to_time} <br>
+    #         Purpose: {self.purpose} <br>  <br>
 
-            Additional Facility Requested: <br>
-            IT Facilities requested: <br> >
-            {self.it_team_requirements} <br> 
-            Facilities requested:  <br> >
-            {self.facility_team_requirements } <br> 
-            Food and Beverage Facilities requested: <br>  >
-            {self.food_and_beverage_team_requirements} <br> <br>
+    #         Additional Facility Requested: <br>
+    #         IT Facilities requested: <br> >
+    #         {self.it_team_requirements} <br> 
+    #         Facilities requested:  <br> >
+    #         {self.facility_team_requirements } <br> 
+    #         Food and Beverage Facilities requested: <br>  >
+    #         {self.food_and_beverage_team_requirements} <br> <br>
 
-            Regards,  <br>
-            VCM Room Booking Team
-         """
+    #         Regards,  <br>
+    #         VCM Room Booking Team
+    #      """
+    #     facilityemail = hall_booking_settings.hall_booking_approver_email
+    #     # Send the email
+    #     # List of email recipients
+    #     recipients = [""]
+    #     recipients.append(self.submitter_email)  # Add the submitter's email
+    #     # Convert the list into a comma-separated string
+    #     recipients_str = ", ".join(recipients)
+    #     frappe.sendmail(
+    #         recipients= recipients_str,
+    #         subject=subject,
+    #         message=message,
+    #         cc=[facilityemail],  # Optional CC emails
+    #     )
+
+    
+    # def send_IT_email(self):
+    #     hall_booking_settings = frappe.get_doc("HallBooking Settings")
+    #     #logging.debug(f"send IT email, with {hall_booking_settings.it_team_email}")
+    #     if hall_booking_settings.it_team_email:             
+    #         subject = f"{self.hall_label} {self.name} has requested IT facilities "
+    #         message = f"""
+    #             Hare Krishna IT Team, <br> <br>
+    #             Room booking {self.name} for room '{self.hall_label}' has requested IT facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
+    #             Booking Details: <br>
+    #             Booking for room '{self.hall_label}'. <br>
+    #             Booked by Name: {self.submitter_name}  <br>
+    #             Booked by Email: {self.submitter_email}  <br>
+    #             Booked by Mobile: {self.submitter_mobile}  <br>
+    #             Start Time: {self.from_time} <br>
+    #             End Time: {self.to_time} <br> 
+    #             Purpose: {self.purpose} <br>  <br>
+    #             IT Facilities requested: <br> >
+    #                 {self.it_team_requirements} <br> <br>
+
+    #             Regards,  <br>
+    #             VCM Room Booking Team
+    #         """
+    #         # Send the email
+    #         # List of email recipients
+    #         recipients = []
+    #         recipients.append(hall_booking_settings.it_team_email)  
+    #         #logging.debug(f"send IT-3 email, with  {recipients}")
+    #         # Convert the list into a comma-separated string
+    #         recipients_str = ", ".join(recipients)
+    #         #logging.debug(f"send IT-4 email, with  {recipients_str}")
+    #         frappe.sendmail(
+    #             recipients= recipients_str,
+    #             subject=subject,
+    #             message=message
+    #         )   
+
+    # def send_facility_email(self):
+    #     hall_booking_settings = frappe.get_doc("HallBooking Settings")
+    #     #logging.debug(f"send IT email, with {hall_booking_settings.facility_team_email}")
+    #     if hall_booking_settings.facility_team_email:   
+    #         subject = f"{self.hall_label} {self.name} has requested addiitonal facilities "
+    #         message = f"""
+    #             Hare Krishna Facility Team, <br> <br>
+    #             Room booking {self.name} for room '{self.hall_label}' has requested additional facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
+    #             Booking Details: <br>
+    #             Booking for room '{self.hall_label}'. <br>
+    #             Booked by Name: {self.submitter_name}  <br>
+    #             Booked by Email: {self.submitter_email}  <br>
+    #             Booked by Mobile: {self.submitter_mobile}  <br>
+    #             Start Time: {self.from_time} <br>
+    #             End Time: {self.to_time} <br> 
+    #             Purpose: {self.purpose} <br>  <br>
+    #             Facilities requested:  <br> >
+    #             {self.facility_team_requirements } <br> <br>
+    #             Regards,  <br>
+    #             VCM Room Booking Team
+    #         """
+    #         # Send the email
+    #         # List of email recipients
+    #         recipients = []
+    #         recipients.append(hall_booking_settings.facility_team_email)  # Add the submitter's email
+    #         #logging.debug(f"send Facilt-3 email, with {hall_booking_settings.facility_team_email}, {recipients}")
+    #         # Convert the list into a comma-separated string
+    #         recipients_str = ", ".join(recipients)
+    #         #logging.debug(f"send IT-3 email, with {hall_booking_settings.facility_team_email}, {recipients_str}")
+    #         frappe.sendmail(
+    #             recipients= recipients_str,
+    #             subject=subject,
+    #             message=message
+    #         )        
+    # def send_fnb_email(self):
+    #     hall_booking_settings = frappe.get_doc("HallBooking Settings")
+    #     #logging.debug("send Food and Beverage email, with status value=%d", self.flags.status_changed)
+    #     if hall_booking_settings.fnb_team_email:  
+    #         # Prepare email details
+    #         subject = f"{self.hall_label} {self.name} has requested Food and Beverage facilities"
+    #         message = f"""
+    #             Hare Krishna Food and Beverage Team, <br> <br>
+    #             Room booking {self.name} for room '{self.hall_label}' has requested Food and Beverage facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
+    #             Booking Details: <br>
+    #             Booking for room '{self.hall_label}'. <br>
+    #             Booked by Name: {self.submitter_name}  <br>
+    #             Booked by Email: {self.submitter_email}  <br>
+    #             Booked by Mobile: {self.submitter_mobile}  <br>
+    #             Start Time: {self.from_time} <br>
+    #             End Time: {self.to_time} <br> 
+    #             Purpose: {self.purpose} <br> 
+
+                
+    #             Food and Beverage Facilities requested: <br>  >
+    #             {self.food_and_beverage_team_requirements} <br> <br>
+    #             Regards,  <br>
+    #             VCM Room Booking Team
+    #         """
+    #         # Send the email
+    #         recipients = []
+    #         recipients.append(hall_booking_settings.fnb_team_email)  # Add the submitter's email
+    #         #logging.debug(f"send Fnb-3 email, with {hall_booking_settings.fnb_team_email}, {recipients}")
+    #         # Convert the list into a comma-separated string
+    #         recipients_str = ", ".join(recipients)
+    #         #logging.debug(f"send FnB-3 email, with {hall_booking_settings.fnb_team_email}, {recipients_str}")
+    #         frappe.sendmail(
+    #             recipients= recipients_str,
+    #             subject=subject,
+    #             message=message
+    #         )
+
+    def send_email_approval_new(doc,IT_flag, Facility_flag, Fnb_flag):
+        #logging.debug(f"**in send_email_approval vcm item rew 1 {currency}, {allowed_options}")
+        template_data = {
+            "doc": doc,
+        }   
+        hall_booking_settings = frappe.get_doc("HallBooking Settings") 
         facilityemail = hall_booking_settings.hall_booking_approver_email
         # Send the email
         # List of email recipients
-        recipients = [""]
-        recipients.append(self.submitter_email)  # Add the submitter's email
-        # Convert the list into a comma-separated string
-        recipients_str = ", ".join(recipients)
+        email_recipients = []
+        email_recipients.append(doc.submitter_email)  # Add the submitter's email
+        if IT_flag:
+            email_recipients.append(hall_booking_settings.it_team_email)
+        if Facility_flag:
+            email_recipients.append(hall_booking_settings.facility_team_email)
+        if Fnb_flag:
+            email_recipients.append(hall_booking_settings.fnb_team_email)
+        
+        # Remove any empty or None values from the recipients list
+        email_recipients = list(filter(None, email_recipients))
+
+        #logging.debug(f"**in send_email_approval_new  {email_recipients} ************* ")
         frappe.sendmail(
-            recipients= recipients_str,
-            subject=subject,
-            message=message,
-            cc=[facilityemail],  # Optional CC emails
+            recipients= email_recipients, # Pass the list directly
+            subject=f"VCM Hall Booking: {doc.hall_label} request status",
+            message=frappe.render_template(
+                "hallbooking/hallbooking_custom/utilities/email_templates/hall_booking_email_template.html", template_data ),
+            cc=[facilityemail] if isinstance(facilityemail, str) else facilityemail if facilityemail else []
         )
+        #logging.debug(f"**in send_email_approval_new vcm item req3 {IT_flag},{Facility_flag},{Fnb_flag} ************* ")
+        return   
 
-    
-    def send_IT_email(self):
-        hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        #logging.debug(f"send IT email, with {hall_booking_settings.it_team_email}")
-        if hall_booking_settings.it_team_email:             
-            subject = f"{self.hall_label} {self.name} has requested IT facilities "
-            message = f"""
-                Hare Krishna IT Team, <br> <br>
-                Room booking {self.name} for room '{self.hall_label}' has requested IT facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
-                Booking Details: <br>
-                Booking for room '{self.hall_label}'. <br>
-                Booked by Name: {self.submitter_name}  <br>
-                Booked by Email: {self.submitter_email}  <br>
-                Booked by Mobile: {self.submitter_mobile}  <br>
-                Start Time: {self.from_time} <br>
-                End Time: {self.to_time} <br> 
-                Purpose: {self.purpose} <br>  <br>
-                IT Facilities requested: <br> >
-                    {self.it_team_requirements} <br> <br>
 
-                Regards,  <br>
-                VCM Room Booking Team
-            """
-            # Send the email
-            # List of email recipients
-            recipients = []
-            recipients.append(hall_booking_settings.it_team_email)  
-            #logging.debug(f"send IT-3 email, with  {recipients}")
-            # Convert the list into a comma-separated string
-            recipients_str = ", ".join(recipients)
-            #logging.debug(f"send IT-4 email, with  {recipients_str}")
-            frappe.sendmail(
-                recipients= recipients_str,
-                subject=subject,
-                message=message
-            )       
-    def send_facility_email(self):
-        hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        #logging.debug(f"send IT email, with {hall_booking_settings.facility_team_email}")
-        if hall_booking_settings.facility_team_email:   
-            subject = f"{self.hall_label} {self.name} has requested addiitonal facilities "
-            message = f"""
-                Hare Krishna Facility Team, <br> <br>
-                Room booking {self.name} for room '{self.hall_label}' has requested additional facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
-                Booking Details: <br>
-                Booking for room '{self.hall_label}'. <br>
-                Booked by Name: {self.submitter_name}  <br>
-                Booked by Email: {self.submitter_email}  <br>
-                Booked by Mobile: {self.submitter_mobile}  <br>
-                Start Time: {self.from_time} <br>
-                End Time: {self.to_time} <br> 
-                Purpose: {self.purpose} <br>  <br>
-                Facilities requested:  <br> >
-                {self.facility_team_requirements } <br> <br>
-                Regards,  <br>
-                VCM Room Booking Team
-            """
-            # Send the email
-            # List of email recipients
-            recipients = []
-            recipients.append(hall_booking_settings.facility_team_email)  # Add the submitter's email
-            #logging.debug(f"send Facilt-3 email, with {hall_booking_settings.facility_team_email}, {recipients}")
-            # Convert the list into a comma-separated string
-            recipients_str = ", ".join(recipients)
-            #logging.debug(f"send IT-3 email, with {hall_booking_settings.facility_team_email}, {recipients_str}")
-            frappe.sendmail(
-                recipients= recipients_str,
-                subject=subject,
-                message=message
-            )        
-    def send_fnb_email(self):
-        hall_booking_settings = frappe.get_doc("HallBooking Settings")
-        #logging.debug("send Food and Beverage email, with status value=%d", self.flags.status_changed)
-        if hall_booking_settings.fnb_team_email:  
-            # Prepare email details
-            subject = f"{self.hall_label} {self.name} has requested Food and Beverage facilities"
-            message = f"""
-                Hare Krishna Food and Beverage Team, <br> <br>
-                Room booking {self.name} for room '{self.hall_label}' has requested Food and Beverage facilities for their booking, and current status is {self.booking_status}, please do the needful. <br> <br>
-                Booking Details: <br>
-                Booking for room '{self.hall_label}'. <br>
-                Booked by Name: {self.submitter_name}  <br>
-                Booked by Email: {self.submitter_email}  <br>
-                Booked by Mobile: {self.submitter_mobile}  <br>
-                Start Time: {self.from_time} <br>
-                End Time: {self.to_time} <br> 
-                Purpose: {self.purpose} <br> 
-
-                
-                Food and Beverage Facilities requested: <br>  >
-                {self.food_and_beverage_team_requirements} <br> <br>
-                Regards,  <br>
-                VCM Room Booking Team
-            """
-            # Send the email
-            recipients = []
-            recipients.append(hall_booking_settings.fnb_team_email)  # Add the submitter's email
-            #logging.debug(f"send Fnb-3 email, with {hall_booking_settings.fnb_team_email}, {recipients}")
-            # Convert the list into a comma-separated string
-            recipients_str = ", ".join(recipients)
-            #logging.debug(f"send FnB-3 email, with {hall_booking_settings.fnb_team_email}, {recipients_str}")
-            frappe.sendmail(
-                recipients= recipients_str,
-                subject=subject,
-                message=message
-            )
 @frappe.whitelist()
 def approve_booking(booking_id):
     """
@@ -283,13 +325,13 @@ def approve_booking(booking_id):
 
         booking.booking_status = "Approved"
         booking.save()
-        logging.info(f"Booking {booking_id} status updated to 'Approved' (draft document).")
+        #logging.info(f"Booking {booking_id} status updated to 'Approved' (draft document).")
 
         #logging.debug(f"approve_booking {booking_id}, {booking.booking_status}, {booking.docstatus}")
         return f"Booking {booking_id} has been approved."
 
     except Exception as e:
-        logging.error(f"Error approving booking {booking_id}: {str(e)}")
+        #logging.error(f"Error approving booking {booking_id}: {str(e)}")
         frappe.throw(f"An error occurred while approving the booking: {str(e)}")
     
     
@@ -308,17 +350,15 @@ def cancel_booking(booking_id):
         # Handle cancellation based on docstatus
         if booking.docstatus == 1:  # Submitted
             booking.cancel()  # Automatically sets docstatus to 2
-            logging.info(f"Booking {booking_id} has been successfully cancelled (submitted document).")
+            #logging.info(f"Booking {booking_id} has been successfully cancelled (submitted document).")
         else:
             booking.booking_status = "Cancelled"
             booking.save()
-            logging.info(f"Booking {booking_id} status updated to 'Cancelled' (draft document).")
-            
-
-        logging.info(f"Booking {booking_id} has been successfully cancelled.")
+            #logging.info(f"Booking {booking_id} status updated to 'Cancelled' (draft document).")
+        #logging.info(f"Booking {booking_id} has been successfully cancelled.")
     except Exception as e:
-        logging.error(f"Error cancelling booking {booking_id}: {str(e)}")
-        #frappe.throw(f"An error occurred while cancelling the booking: {str(e)}") 
+        #logging.error(f"Error cancelling booking {booking_id}: {str(e)}")
+        frappe.throw(f"An error occurred while cancelling the booking: {str(e)}") 
      
 
 
